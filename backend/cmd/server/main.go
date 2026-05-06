@@ -44,6 +44,12 @@ func main() {
 	docService := services.NewDocumentService(docRepo, docSimulator)
 	docHandler := handlers.NewDocumentHandler(docService)
 
+	// Initialize Payment dependencies
+	paymentSimulator := simulator.NewPaymentSimulator(cfg)
+	paymentRepo := repository.NewPaymentRepository(db)
+	paymentService := services.NewPaymentService(paymentRepo, paymentSimulator)
+	paymentHandler := handlers.NewPaymentHandler(paymentService)
+
 	api := r.Group("/api/v1")
 	{
 		// Auth Routes
@@ -72,10 +78,12 @@ func main() {
 
 		// Payment Routes
 		paymentGroup := api.Group("/payments")
-		// paymentGroup.Use(middleware.Auth(cfg.JWTSecret)) // Will uncomment when auth is ready
+		paymentGroup.Use(middleware.Auth(cfg.JWTSecret))
 		{
-			// TODO: Add payment routes
-			_ = paymentGroup
+			paymentGroup.GET("/bills", paymentHandler.ListBills)
+			paymentGroup.POST("/process", paymentHandler.Process)
+			paymentGroup.GET("/:id/status", paymentHandler.Status)
+			paymentGroup.GET("/history", paymentHandler.History)
 		}
 
 		// Complaint Routes
