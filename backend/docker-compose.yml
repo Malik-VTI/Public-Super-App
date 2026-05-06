@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -11,15 +9,48 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U govapp_user -d govapp_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .
     ports:
       - "8080:8080"
-    env_file:
-      - .env
+    environment:
+      APP_PORT: 8080
+      APP_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: govapp_db
+      DB_USER: govapp_user
+      DB_PASSWORD: govapp_password
+      JWT_SECRET: govapp-docker-secret-key
+      JWT_EXPIRY_HOURS: 24
+      SIMULATOR_PAYMENT_ERROR_RATE: 10
+      SIMULATOR_PAYMENT_TIMEOUT_RATE: 10
+      SIMULATOR_PAYMENT_TIMEOUT_SECS: 5
+      SIMULATOR_DOC_PROCESSING_SECS: 10
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  seeder:
+    build: 
+      context: .
+      dockerfile: Dockerfile.seed
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: govapp_db
+      DB_USER: govapp_user
+      DB_PASSWORD: govapp_password
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
