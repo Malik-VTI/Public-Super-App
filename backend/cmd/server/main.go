@@ -6,7 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/govapp/backend/internal/config"
 	"github.com/govapp/backend/internal/database"
+	"github.com/govapp/backend/internal/handlers"
 	"github.com/govapp/backend/internal/middleware"
+	"github.com/govapp/backend/internal/repository"
+	"github.com/govapp/backend/internal/services"
 )
 
 func main() {
@@ -29,13 +32,25 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Initialize dependencies
+	userRepo := repository.NewUserRepository(db)
+	authService := services.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	authHandler := handlers.NewAuthHandler(authService)
+
 	api := r.Group("/api/v1")
 	{
 		// Auth Routes
 		authGroup := api.Group("/auth")
 		{
-			// TODO: Add auth routes
-			_ = authGroup
+			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/biometric", authHandler.BiometricLogin)
+			authGroup.POST("/logout", authHandler.Logout)
+			authGroup.POST("/refresh", authHandler.Refresh)
+			
+			// Protected profile route
+			protected := authGroup.Group("")
+			protected.Use(middleware.Auth(cfg.JWTSecret))
+			protected.GET("/profile", authHandler.Profile)
 		}
 
 		// Document Routes
