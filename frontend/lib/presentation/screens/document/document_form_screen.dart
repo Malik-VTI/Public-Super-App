@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
+import '../../../data/repositories/document_repository.dart';
+import '../../../data/datasources/remote/api_client.dart';
+
 class DocumentFormScreen extends StatefulWidget {
   const DocumentFormScreen({super.key});
 
@@ -9,21 +12,48 @@ class DocumentFormScreen extends StatefulWidget {
 }
 
 class _DocumentFormScreenState extends State<DocumentFormScreen> {
+  late DocumentRepository _docRepo;
   String _selectedType = 'KTP';
   final _nameController = TextEditingController();
   final _nikController = TextEditingController();
   final _addressController = TextEditingController();
   bool _loading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _docRepo = DocumentRepository(ApiClient());
+  }
+
   void _submit() async {
+    final name = _nameController.text.trim();
+    final nik = _nikController.text.trim();
+    final address = _addressController.text.trim();
+
+    if (name.isEmpty || nik.isEmpty || address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon isi semua data')));
+      return;
+    }
+
     setState(() => _loading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pengajuan berhasil dikirim!')),
-    );
-    Navigator.of(context).pop();
+    
+    try {
+      await _docRepo.createDocument(_selectedType, {
+        'name': name,
+        'nik': nik,
+        'address': address,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pengajuan berhasil dikirim!')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengajukan dokumen: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

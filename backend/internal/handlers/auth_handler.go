@@ -101,3 +101,76 @@ func (h *AuthHandler) Profile(c *gin.Context) {
 
 	response.Success(c, "Profile retrieved successfully", user)
 }
+
+type RegisterRequest struct {
+	NIK      string `json:"nik" binding:"required,len=16"`
+	FullName string `json:"full_name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Phone    string `json:"phone" binding:"required"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, 400, "Invalid request", []string{err.Error()})
+		return
+	}
+
+	token, err := h.service.Register(req.NIK, req.FullName, req.Email, req.Phone, req.Password)
+	if err != nil {
+		response.Error(c, 400, "Registration failed", []string{err.Error()})
+		return
+	}
+
+	response.Success(c, "Registration successful", gin.H{"token": token})
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	NIK         string `json:"nik" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, 400, "Invalid request", []string{err.Error()})
+		return
+	}
+
+	err := h.service.ResetPassword(req.Email, req.NIK, req.NewPassword)
+	if err != nil {
+		response.Error(c, 400, "Password reset failed", []string{err.Error()})
+		return
+	}
+
+	response.Success(c, "Password reset successfully", nil)
+}
+
+type UpdateProfileRequest struct {
+	FullName string `json:"full_name" binding:"required"`
+	Phone    string `json:"phone" binding:"required"`
+}
+
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Error(c, 401, "Unauthorized", []string{"User ID not found in context"})
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, 400, "Invalid request", []string{err.Error()})
+		return
+	}
+
+	user, err := h.service.UpdateProfile(userID.(uint), req.FullName, req.Phone)
+	if err != nil {
+		response.Error(c, 500, "Profile update failed", []string{err.Error()})
+		return
+	}
+
+	response.Success(c, "Profile updated successfully", user)
+}

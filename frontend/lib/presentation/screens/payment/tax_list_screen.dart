@@ -2,8 +2,42 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../widgets/common/common_widgets.dart';
 
-class TaxListScreen extends StatelessWidget {
+import '../../../data/repositories/payment_repository.dart';
+import '../../../data/datasources/remote/api_client.dart';
+import '../../../data/models/payment_model.dart';
+
+class TaxListScreen extends StatefulWidget {
   const TaxListScreen({super.key});
+
+  @override
+  State<TaxListScreen> createState() => _TaxListScreenState();
+}
+
+class _TaxListScreenState extends State<TaxListScreen> {
+  late PaymentRepository _paymentRepo;
+  List<PaymentModel> _bills = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _paymentRepo = PaymentRepository(ApiClient());
+    _loadBills();
+  }
+
+  Future<void> _loadBills() async {
+    setState(() => _loading = true);
+    try {
+      final bills = await _paymentRepo.getBills();
+      if (mounted) setState(() { _bills = bills; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  double get _totalAmount {
+    return _bills.fold(0, (sum, item) => sum + item.amount);
+  }
 
   String _formatCurrency(double amount) {
     return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
@@ -11,17 +45,16 @@ class TaxListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bills = [
-      {'type': 'PBB', 'number': 'PBB-2023-001', 'amount': 1500000.0, 'status': 'PENDING'},
-      {'type': 'PKB', 'number': 'PKB-2023-002', 'amount': 750000.0, 'status': 'PENDING'},
-    ];
-
     return Scaffold(
       backgroundColor: AppTheme.surfaceWhite,
       appBar: AppBar(title: const Text('Pembayaran')),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      body: _loading 
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: _loadBills,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           // Summary card
           Container(
             margin: const EdgeInsets.all(20),
@@ -36,7 +69,7 @@ class TaxListScreen extends StatelessWidget {
                 Text('Total Tagihan', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.6))),
                 const SizedBox(height: 6),
                 Text(
-                  _formatCurrency(2250000),
+                  _formatCurrency(_totalAmount),
                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
@@ -46,24 +79,24 @@ class TaxListScreen extends StatelessWidget {
                     color: AppTheme.accentLime,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('2 tagihan aktif', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: Text('${_bills.length} tagihan aktif', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
           ),
 
-          Padding(
+          const Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: const Text('Tagihan Aktif', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            child: Text('Tagihan Aktif', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
 
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: bills.length,
+              itemCount: _bills.length,
               itemBuilder: (context, index) {
-                final bill = bills[index];
+                final bill = _bills[index];
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
@@ -90,13 +123,13 @@ class TaxListScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Pajak ${bill['type']}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                                Text('Pajak ${bill.billType}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 2),
-                                Text(bill['number'] as String, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                                Text(bill.billNumber, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                               ],
                             ),
                           ),
-                          StatusBadge(status: bill['status'] as String),
+                          StatusBadge(status: bill.status),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -105,9 +138,12 @@ class TaxListScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(_formatCurrency(bill['amount'] as double), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                          Text(_formatCurrency(bill.amount), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                           ElevatedButton(
-                            onPressed: () => Navigator.of(context).pushNamed('/payments/process'),
+                            onPressed: () async {
+                              final result = await Navigator.of(context).pushNamed('/payments/process', arguments: bill);
+                              if (result == true) _loadBills();
+                            },
                             style: ElevatedButton.styleFrom(
                               minimumSize: const Size(100, 40),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -124,6 +160,6 @@ class TaxListScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }

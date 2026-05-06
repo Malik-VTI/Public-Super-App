@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/payment_model.dart';
 
 class PaymentStatusScreen extends StatelessWidget {
   const PaymentStatusScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final payment = ModalRoute.of(context)!.settings.arguments as PaymentModel?;
+    
+    if (payment == null) {
+      return const Scaffold(body: Center(child: Text('Data pembayaran tidak ditemukan')));
+    }
+
+    final isSuccess = payment.status == 'SUCCESS';
     return Scaffold(
       backgroundColor: AppTheme.surfaceWhite,
       body: SafeArea(
@@ -15,20 +23,24 @@ class PaymentStatusScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              // Success icon
+              // Status icon
               Container(
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: AppTheme.accentLime.withOpacity(0.2),
+                  color: isSuccess ? AppTheme.accentLime.withOpacity(0.2) : AppTheme.error.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(Icons.check_circle_rounded, size: 48, color: AppTheme.success),
+                child: Icon(
+                  isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded, 
+                  size: 48, 
+                  color: isSuccess ? AppTheme.success : AppTheme.error
+                ),
               ),
               const SizedBox(height: 24),
-              const Text('Pembayaran Berhasil!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+              Text(isSuccess ? 'Pembayaran Berhasil!' : 'Pembayaran ${payment.status}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              Text('Transaksi Anda telah diproses', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+              Text(isSuccess ? 'Transaksi Anda telah diproses' : 'Silakan coba lagi', style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
               const SizedBox(height: 32),
 
               Container(
@@ -41,12 +53,16 @@ class PaymentStatusScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _detailRow('Jenis', 'Pajak PBB'),
-                    _detailRow('Nomor', 'PBB-2023-001'),
-                    _detailRow('Metode', 'Bank Transfer'),
-                    _detailRow('ID Transaksi', 'TRX-1683...'),
+                    _detailRow('Jenis', 'Pajak ${payment.billType}'),
+                    _detailRow('Nomor', payment.billNumber),
+                    _detailRow('Metode', payment.paymentMethod ?? '-'),
+                    if (payment.bankCode != null && payment.bankCode!.isNotEmpty) _detailRow('Bank', payment.bankCode!),
+                    if (payment.vaNumber != null && payment.vaNumber!.isNotEmpty) _detailRow('Virtual Account', payment.vaNumber!),
+                    if (payment.qrisString != null && payment.qrisString!.isNotEmpty) _detailRow('QRIS Ref', payment.qrisString!),
+                    if (payment.ewalletRef != null && payment.ewalletRef!.isNotEmpty) _detailRow('E-Wallet Ref', payment.ewalletRef!),
+                    if (payment.transactionId != null) _detailRow('ID Transaksi', payment.transactionId!),
                     const Divider(height: 20),
-                    _detailRow('Total Dibayar', 'Rp 1.500.000', isBold: true),
+                    _detailRow('Total Dibayar', 'Rp ${payment.amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}', isBold: true),
                   ],
                 ),
               ),

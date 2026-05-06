@@ -14,6 +14,10 @@ type Payment struct {
 	Amount        float64        `json:"amount"`
 	Status        string         `json:"status"` // PENDING, SUCCESS, FAILED, TIMEOUT
 	PaymentMethod string         `json:"payment_method,omitempty"`
+	BankCode      string         `json:"bank_code,omitempty"`
+	VANumber      string         `json:"va_number,omitempty"`
+	QRISString    string         `json:"qris_string,omitempty"`
+	EwalletRef    string         `json:"ewallet_ref,omitempty"`
 	TransactionID string         `json:"transaction_id,omitempty"`
 	PaidAt        *time.Time     `json:"paid_at,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`

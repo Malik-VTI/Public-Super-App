@@ -14,7 +14,7 @@ type PaymentService interface {
 	GetUserBills(userID uint) ([]models.Payment, error)
 	GetPaymentHistory(userID uint) ([]models.Payment, error)
 	GetPaymentStatus(paymentID uint) (*models.Payment, error)
-	ProcessPayment(userID uint, paymentID uint, method string) (*models.Payment, error)
+	ProcessPayment(userID uint, paymentID uint, method, bankCode, ewalletType string) (*models.Payment, error)
 }
 
 type paymentService struct {
@@ -38,7 +38,7 @@ func (s *paymentService) GetPaymentStatus(paymentID uint) (*models.Payment, erro
 	return s.repo.FindByID(paymentID)
 }
 
-func (s *paymentService) ProcessPayment(userID uint, paymentID uint, method string) (*models.Payment, error) {
+func (s *paymentService) ProcessPayment(userID uint, paymentID uint, method, bankCode, ewalletType string) (*models.Payment, error) {
 	payment, err := s.repo.FindByID(paymentID)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,24 @@ func (s *paymentService) ProcessPayment(userID uint, paymentID uint, method stri
 
 	if result == "SUCCESS" {
 		trxID := fmt.Sprintf("TRX-%d-%d", time.Now().Unix(), paymentID)
-		err = s.repo.UpdateSuccess(paymentID, result, method, trxID)
+		
+		// Generate details based on method
+		var vaNum, qrisStr, ewalletRef string
+		if method == "VIRTUAL_ACCOUNT" || method == "BANK_TRANSFER" {
+			vaNum = fmt.Sprintf("8800%d", time.Now().UnixNano()%1000000000000)
+			if bankCode == "" {
+				bankCode = "BCA" // Default for testing
+			}
+		} else if method == "QRIS" {
+			qrisStr = fmt.Sprintf("00020101021226%d", time.Now().UnixNano())
+		} else if method == "EWALLET" {
+			if ewalletType == "" {
+				ewalletType = "GOPAY"
+			}
+			ewalletRef = fmt.Sprintf("%s-REF-%d", ewalletType, time.Now().Unix())
+		}
+
+		err = s.repo.UpdateSuccess(paymentID, result, method, trxID, bankCode, vaNum, qrisStr, ewalletRef)
 	} else {
 		err = s.repo.UpdateStatus(paymentID, result)
 	}

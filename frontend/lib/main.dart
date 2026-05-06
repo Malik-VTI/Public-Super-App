@@ -10,6 +10,9 @@ import 'presentation/screens/payment/payment_form_screen.dart';
 import 'presentation/screens/payment/payment_status_screen.dart';
 import 'presentation/screens/complaint/complaint_list_screen.dart';
 import 'presentation/screens/complaint/complaint_form_screen.dart';
+import 'presentation/screens/auth/register_screen.dart';
+import 'presentation/screens/auth/forgot_password_screen.dart';
+import 'presentation/screens/profile/edit_profile_screen.dart';
 
 void main() {
   runApp(const GovApp());
@@ -28,7 +31,10 @@ class GovApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/profile/edit': (context) => const EditProfileScreen(),
         '/documents': (context) => const DocumentListScreen(),
         '/documents/create': (context) => const DocumentFormScreen(),
         '/payments': (context) => const TaxListScreen(),

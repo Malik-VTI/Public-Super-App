@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
+import '../../../data/repositories/auth_repository.dart';
+import '../../../data/datasources/remote/api_client.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,6 +16,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
+  late AuthRepository _authRepo;
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepo = AuthRepository(ApiClient());
+  }
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -22,11 +32,19 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     setState(() => _loading = true);
-    // Simulate login delay for demo (real app would call AuthRepository)
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.of(context).pushReplacementNamed('/dashboard');
+    
+    try {
+      await _authRepo.login(_emailController.text, _passwordController.text);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/dashboard');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login gagal, periksa kredensial Anda')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -106,7 +124,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: const Text('Login dengan Biometrik'),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // Links
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pushNamed('/forgot-password'),
+                  child: const Text('Lupa Password?', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Belum punya akun?', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pushNamed('/register'),
+                    child: const Text('Daftar', style: TextStyle(color: AppTheme.primaryBlack, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
               // Demo credentials hint
               Container(

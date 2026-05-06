@@ -12,6 +12,7 @@ type UserRepository interface {
 	FindByID(id uint) (*models.User, error)
 	Create(user *models.User) error
 	FindByBiometricKey(key string) (*models.User, error)
+	Update(user *models.User) error
 }
 
 type userRepository struct {
