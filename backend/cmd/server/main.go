@@ -10,6 +10,7 @@ import (
 	"github.com/govapp/backend/internal/middleware"
 	"github.com/govapp/backend/internal/repository"
 	"github.com/govapp/backend/internal/services"
+	"github.com/govapp/backend/pkg/simulator"
 )
 
 func main() {
@@ -37,6 +38,12 @@ func main() {
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
 	authHandler := handlers.NewAuthHandler(authService)
 
+	// Initialize Document dependencies
+	docSimulator := simulator.NewDocumentSimulator(cfg.DocProcessingSecs)
+	docRepo := repository.NewDocumentRepository(db)
+	docService := services.NewDocumentService(docRepo, docSimulator)
+	docHandler := handlers.NewDocumentHandler(docService)
+
 	api := r.Group("/api/v1")
 	{
 		// Auth Routes
@@ -55,10 +62,12 @@ func main() {
 
 		// Document Routes
 		docGroup := api.Group("/documents")
-		// docGroup.Use(middleware.Auth(cfg.JWTSecret)) // Will uncomment when auth is ready
+		docGroup.Use(middleware.Auth(cfg.JWTSecret))
 		{
-			// TODO: Add document routes
-			_ = docGroup
+			docGroup.GET("", docHandler.List)
+			docGroup.POST("", docHandler.Create)
+			docGroup.POST("/:id/upload", docHandler.UploadFile)
+			docGroup.GET("/:id/status", docHandler.Status)
 		}
 
 		// Payment Routes
