@@ -1,8 +1,10 @@
 class ApiConstants {
-  static const String baseUrl = 'http://localhost:8080';
+  static const String baseUrl = 'http://10.0.2.2:8080';
   
   // Auth
   static const String login = '/api/v1/auth/login';
+  static const String register = '/api/v1/auth/register';
+  static const String resetPassword = '/api/v1/auth/reset-password';
   static const String biometric = '/api/v1/auth/biometric';
   static const String logout = '/api/v1/auth/logout';
   static const String refresh = '/api/v1/auth/refresh';

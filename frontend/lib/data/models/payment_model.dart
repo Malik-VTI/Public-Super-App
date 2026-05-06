@@ -6,6 +6,10 @@ class PaymentModel {
   final double amount;
   final String status;
   final String? paymentMethod;
+  final String? bankCode;
+  final String? vaNumber;
+  final String? qrisString;
+  final String? ewalletRef;
   final String? transactionId;
   final DateTime? paidAt;
   final DateTime createdAt;
@@ -18,6 +22,10 @@ class PaymentModel {
     required this.amount,
     required this.status,
     this.paymentMethod,
+    this.bankCode,
+    this.vaNumber,
+    this.qrisString,
+    this.ewalletRef,
     this.transactionId,
     this.paidAt,
     required this.createdAt,
@@ -32,6 +40,10 @@ class PaymentModel {
       amount: (json['amount'] as num).toDouble(),
       status: json['status'] ?? '',
       paymentMethod: json['payment_method'],
+      bankCode: json['bank_code'],
+      vaNumber: json['va_number'],
+      qrisString: json['qris_string'],
+      ewalletRef: json['ewallet_ref'],
       transactionId: json['transaction_id'],
       paidAt: json['paid_at'] != null ? DateTime.parse(json['paid_at']) : null,
       createdAt: DateTime.parse(json['created_at']),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
+import '../../../data/repositories/complaint_repository.dart';
+import '../../../data/datasources/remote/api_client.dart';
+
 class ComplaintFormScreen extends StatefulWidget {
   const ComplaintFormScreen({super.key});
 
@@ -9,6 +12,7 @@ class ComplaintFormScreen extends StatefulWidget {
 }
 
 class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
+  late ComplaintRepository _complaintRepo;
   String _selectedCategory = 'JALAN_RUSAK';
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
@@ -21,15 +25,35 @@ class _ComplaintFormScreenState extends State<ComplaintFormScreen> {
     {'value': 'BANJIR', 'label': 'Banjir', 'icon': Icons.water_damage_outlined},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _complaintRepo = ComplaintRepository(ApiClient());
+  }
+
   void _submit() async {
+    final description = _descriptionController.text.trim();
+    final address = _addressController.text.trim();
+
+    if (description.isEmpty || address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon isi alamat dan deskripsi')));
+      return;
+    }
+
     setState(() => _loading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pengaduan berhasil dikirim!')),
-    );
-    Navigator.of(context).pop();
+    try {
+      await _complaintRepo.createComplaint(_selectedCategory, description, address, 0.0, 0.0);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pengaduan berhasil dikirim!')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengirim pengaduan: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

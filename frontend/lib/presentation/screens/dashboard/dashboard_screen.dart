@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../widgets/common/common_widgets.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../data/datasources/remote/api_client.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -185,9 +187,9 @@ class _HomeTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Mode Simulasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text('Mode Simulasi Pembayaran', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         SizedBox(height: 2),
-                        Text('Seluruh data bersifat dummy', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        Text('Pembayaran VA, QRIS, E-Wallet hanya simulasi', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                       ],
                     ),
                   ),
@@ -215,28 +217,7 @@ class _ActivityTab extends StatelessWidget {
           const Text('Aktivitas Terbaru', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView(
-              children: [
-                _ActivityItem(
-                  icon: Icons.description_outlined,
-                  title: 'Pengajuan KTP',
-                  subtitle: '2 jam yang lalu',
-                  status: 'IN_REVIEW',
-                ),
-                _ActivityItem(
-                  icon: Icons.payments_outlined,
-                  title: 'Pembayaran PBB',
-                  subtitle: '1 hari yang lalu',
-                  status: 'SUCCESS',
-                ),
-                _ActivityItem(
-                  icon: Icons.report_problem_outlined,
-                  title: 'Pengaduan Jalan Rusak',
-                  subtitle: '3 hari yang lalu',
-                  status: 'SUBMITTED',
-                ),
-              ],
-            ),
+            child: Center(child: Text('Aktivitas akan segera hadir', style: TextStyle(color: AppTheme.textSecondary))),
           ),
         ],
       ),
@@ -295,11 +276,46 @@ class _ActivityItem extends StatelessWidget {
   }
 }
 
-class _ProfileTab extends StatelessWidget {
+class _ProfileTab extends StatefulWidget {
   const _ProfileTab();
 
   @override
+  State<_ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<_ProfileTab> {
+  late AuthRepository _authRepo;
+  Map<String, dynamic>? _profile;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _authRepo = AuthRepository(ApiClient());
+    _loadProfile();
+  }
+
+  void _loadProfile() async {
+    try {
+      final data = await _authRepo.getProfile();
+      if (mounted) setState(() { _profile = data; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _logout() async {
+    await _authRepo.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    final name = _profile?['full_name'] ?? 'User';
+    final email = _profile?['email'] ?? 'email@govapp.id';
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -316,12 +332,19 @@ class _ProfileTab extends StatelessWidget {
             child: const Icon(Icons.person, size: 40, color: AppTheme.accentLime),
           ),
           const SizedBox(height: 14),
-          const Text('Budi Santoso', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text('warga1@govapp.id', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          Text(email, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
           const SizedBox(height: 32),
 
-          _ProfileMenuItem(icon: Icons.person_outline, label: 'Edit Profil', onTap: () {}),
+          _ProfileMenuItem(
+            icon: Icons.person_outline, 
+            label: 'Edit Profil', 
+            onTap: () async {
+              final result = await Navigator.of(context).pushNamed('/profile/edit');
+              if (result == true) _loadProfile();
+            }
+          ),
           _ProfileMenuItem(icon: Icons.lock_outline, label: 'Ubah Password', onTap: () {}),
           _ProfileMenuItem(icon: Icons.help_outline, label: 'Bantuan', onTap: () {}),
           const SizedBox(height: 12),
@@ -329,7 +352,7 @@ class _ProfileTab extends StatelessWidget {
             icon: Icons.logout,
             label: 'Keluar',
             isDestructive: true,
-            onTap: () => Navigator.of(context).pushReplacementNamed('/login'),
+            onTap: _logout,
           ),
         ],
       ),

@@ -43,6 +43,42 @@ class AuthRepository {
     return response.data['data'];
   }
 
+  Future<Map<String, dynamic>> updateProfile(String fullName, String phone) async {
+    final response = await _apiClient.dio.put(
+      ApiConstants.profile,
+      data: {'full_name': fullName, 'phone': phone},
+    );
+    return response.data['data'];
+  }
+
+  Future<String> register(String nik, String fullName, String email, String phone, String password) async {
+    final response = await _apiClient.dio.post(
+      ApiConstants.register,
+      data: {
+        'nik': nik,
+        'full_name': fullName,
+        'email': email,
+        'phone': phone,
+        'password': password,
+      },
+    );
+    final token = response.data['data']['token'];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+    return token;
+  }
+
+  Future<void> resetPassword(String email, String nik, String newPassword) async {
+    await _apiClient.dio.post(
+      ApiConstants.resetPassword,
+      data: {
+        'email': email,
+        'nik': nik,
+        'new_password': newPassword,
+      },
+    );
+  }
+
   Future<String?> getSavedToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');

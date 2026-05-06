@@ -35,6 +35,8 @@ func (h *PaymentHandler) ListBills(c *gin.Context) {
 type ProcessPaymentRequest struct {
 	BillID        uint   `json:"bill_id" binding:"required"`
 	PaymentMethod string `json:"payment_method" binding:"required"`
+	BankCode      string `json:"bank_code"`
+	EwalletType   string `json:"ewallet_type"`
 }
 
 func (h *PaymentHandler) Process(c *gin.Context) {
@@ -50,7 +52,7 @@ func (h *PaymentHandler) Process(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.service.ProcessPayment(userID.(uint), req.BillID, req.PaymentMethod)
+	payment, err := h.service.ProcessPayment(userID.(uint), req.BillID, req.PaymentMethod, req.BankCode, req.EwalletType)
 	if err != nil {
 		response.Error(c, 500, "Failed to process payment", []string{err.Error()})
 		return

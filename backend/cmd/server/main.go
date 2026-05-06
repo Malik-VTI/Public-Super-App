@@ -61,7 +61,9 @@ func main() {
 		authGroup := api.Group("/auth")
 		{
 			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/register", authHandler.Register)
 			authGroup.POST("/biometric", authHandler.BiometricLogin)
+			authGroup.POST("/reset-password", authHandler.ResetPassword)
 			authGroup.POST("/logout", authHandler.Logout)
 			authGroup.POST("/refresh", authHandler.Refresh)
 			
@@ -69,6 +71,7 @@ func main() {
 			protected := authGroup.Group("")
 			protected.Use(middleware.Auth(cfg.JWTSecret))
 			protected.GET("/profile", authHandler.Profile)
+			protected.PUT("/profile", authHandler.UpdateProfile)
 		}
 
 		// Document Routes

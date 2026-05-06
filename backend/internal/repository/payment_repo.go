@@ -11,7 +11,7 @@ type PaymentRepository interface {
 	FindHistoryByUserID(userID uint) ([]models.Payment, error)
 	FindByID(id uint) (*models.Payment, error)
 	UpdateStatus(id uint, status string) error
-	UpdateSuccess(id uint, status string, method string, transactionID string) error
+	UpdateSuccess(id uint, status, method, transactionID, bankCode, vaNumber, qrisString, ewalletRef string) error
 }
 
 type paymentRepository struct {
@@ -51,11 +51,25 @@ func (r *paymentRepository) UpdateStatus(id uint, status string) error {
 	return r.db.Model(&models.Payment{}).Where("id = ?", id).Update("status", status).Error
 }
 
-func (r *paymentRepository) UpdateSuccess(id uint, status string, method string, transactionID string) error {
-	return r.db.Model(&models.Payment{}).Where("id = ?", id).Updates(map[string]interface{}{
+func (r *paymentRepository) UpdateSuccess(id uint, status, method, transactionID, bankCode, vaNumber, qrisString, ewalletRef string) error {
+	updates := map[string]interface{}{
 		"status":         status,
 		"payment_method": method,
 		"transaction_id": transactionID,
 		"paid_at":        gorm.Expr("NOW()"),
-	}).Error
+	}
+	if bankCode != "" {
+		updates["bank_code"] = bankCode
+	}
+	if vaNumber != "" {
+		updates["va_number"] = vaNumber
+	}
+	if qrisString != "" {
+		updates["qris_string"] = qrisString
+	}
+	if ewalletRef != "" {
+		updates["ewallet_ref"] = ewalletRef
+	}
+
+	return r.db.Model(&models.Payment{}).Where("id = ?", id).Updates(updates).Error
 }

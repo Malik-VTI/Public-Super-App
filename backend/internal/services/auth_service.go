@@ -15,6 +15,9 @@ type AuthService interface {
 	ValidateBiometric(biometricKey string) (string, error)
 	RefreshToken(oldToken string) (string, error)
 	GetProfile(userID uint) (*models.User, error)
+	Register(nik, fullName, email, phone, password string) (string, error)
+	ResetPassword(email, nik, newPassword string) error
+	UpdateProfile(userID uint, fullName, phone string) (*models.User, error)
 }
 
 type authService struct {
@@ -103,5 +106,71 @@ func (s *authService) GetProfile(userID uint) (*models.User, error) {
 	if user == nil {
 		return nil, errors.New("user not found")
 	}
+	return user, nil
+}
+
+func (s *authService) Register(nik, fullName, email, phone, password string) (string, error) {
+	// Check if email or NIK already exists
+	existingUser, _ := s.repo.FindByEmail(email)
+	if existingUser != nil {
+		return "", errors.New("email already registered")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	user := &models.User{
+		NIK:      nik,
+		FullName: fullName,
+		Email:    email,
+		Phone:    phone,
+		Password: string(hashedPassword),
+	}
+
+	err = s.repo.Create(user)
+	if err != nil {
+		return "", err
+	}
+
+	return s.generateToken(user.ID)
+}
+
+func (s *authService) ResetPassword(email, nik, newPassword string) error {
+	user, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return err
+	}
+	if user == nil || user.NIK != nik {
+		return errors.New("invalid email or NIK")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(hashedPassword)
+	return s.repo.Update(user)
+}
+
+func (s *authService) UpdateProfile(userID uint, fullName, phone string) (*models.User, error) {
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	user.FullName = fullName
+	user.Phone = phone
+
+	err = s.repo.Update(user)
+	if err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
