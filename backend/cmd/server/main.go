@@ -50,6 +50,11 @@ func main() {
 	paymentService := services.NewPaymentService(paymentRepo, paymentSimulator)
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
 
+	// Initialize Complaint dependencies
+	complaintRepo := repository.NewComplaintRepository(db)
+	complaintService := services.NewComplaintService(complaintRepo)
+	complaintHandler := handlers.NewComplaintHandler(complaintService)
+
 	api := r.Group("/api/v1")
 	{
 		// Auth Routes
@@ -88,10 +93,12 @@ func main() {
 
 		// Complaint Routes
 		complaintGroup := api.Group("/complaints")
-		// complaintGroup.Use(middleware.Auth(cfg.JWTSecret)) // Will uncomment when auth is ready
+		complaintGroup.Use(middleware.Auth(cfg.JWTSecret))
 		{
-			// TODO: Add complaint routes
-			_ = complaintGroup
+			complaintGroup.GET("", complaintHandler.List)
+			complaintGroup.POST("", complaintHandler.Create)
+			complaintGroup.POST("/:id/upload", complaintHandler.UploadPhoto)
+			complaintGroup.GET("/:id", complaintHandler.Detail)
 		}
 	}
 
